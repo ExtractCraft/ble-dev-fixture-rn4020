@@ -12,6 +12,8 @@ class RN4020P:
     self.serial = serial.Serial(port, baudrate=115200, timeout=0, writeTimeout=0)
     # Read buffer to deal with incomplete lines
     self.read_buffer = ''
+    # Debug prints off by default
+    self.debug_print = False
     # Make sure we start with sync'ed communication
     self._write_cmd('V')
 
@@ -36,12 +38,12 @@ class RN4020P:
 
   def _write_cmd(self, cmd):
     """Write a command and wait for response"""
-    print ">" + cmd
+    if self.debug_print: print ">" + cmd
     self._write_line(cmd);
     resp = None
     while resp == None:
       resp = self._read_line()
-    print "<" + resp
+    if self.debug_print: print "<" + resp
     return resp
 
   def _read_lines(self):
