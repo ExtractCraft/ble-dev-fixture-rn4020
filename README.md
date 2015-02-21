@@ -1,5 +1,12 @@
 # ble-dev-fixture-rn4020
-A development and test fixture for working with the RN4020 module.
+
+[RN4020]: http://www.microchip.com/wwwproducts/Devices.aspx?product=RN4020
+
+A development and test fixture for working with the Microchip [RN4020] module.
+
+## Hardware
+
+When no sleep or hibernate functionality is needed, the only hardware connections required are TXD and RXD.  WAKE_HW and CMD/MLDP should be low, WAKE_SW should be high.  If sleep is required, the module activates when WAKE_SW is high and goes to sleep when low.  When waking, the module will send `CMD` and when put to sleep it will send `END`.
 
 ## rn4020.py: RN4020P class
 
@@ -41,3 +48,7 @@ ble.read_characteristic(cuuid[1])
 ```
 
 All values are written and read as hexadecimal strings.  When writing, make sure to write the exact number of characters needed for the characteristic size!
+
+## Limitations
+
+This module is only a start to a full implementation.  Many things can be added to make it better.
