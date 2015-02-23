@@ -16,6 +16,14 @@ class RN4020P:
     self.debug_print = False
     # Make sure we start with sync'ed communication
     self._write_cmd('V')
+    # Initialize callbacks for connect status update and write notification
+    self.connect_cb = None
+    self.write_cb = None
+
+  def set_callbacks(self, connect, write):
+    """Set callbacks for connect status update and write notification"""
+    self.connect_cb = connect
+    self.write_cb = write
 
   def _write_line(self, data):
     """Low level write line to BLE module"""
@@ -48,7 +56,7 @@ class RN4020P:
 
   def _read_lines(self):
     """Read all full lines received"""
-    d = ""
+    d = ''
     while True:
       l = self._read_line()
       if l != None:
@@ -179,8 +187,8 @@ class RN4020P:
   def read_characteristic(self, uuid):
     """Read the characteristic with the specified UUID
     Data will be returned as a HEX string"""
-    # Throw away old crap
-    self._discard_input()
+    # Process anything already in the buffer
+    self.process_input()
     # Choose format based on 16-bit or 128-bit UUID
     if uuid > 0xFFFF:
       return self._write_cmd('SUR,%032X' % uuid)
@@ -196,3 +204,21 @@ class RN4020P:
     else:
       self._write_cmd('SUW,%04X,%s' % (uuid, data))
 
+  def process_input(self):
+    """Read what's in the input buffer to keep track of events such
+    as client connect / disconnect and characteristic writes"""
+    while True:
+      l = self._read_line()
+      if l != None:
+        print l
+        # Capture connection event
+        if l == 'Connected' and self.connect_cb:
+          self.connect_cb(True)
+        # Capture disconnect event
+        if l == 'Connection End' and self.connect_cb:
+          self.connect_cb(False)
+        # Capture remote characteristic write event
+        if l[:3] == 'WV,' and self.write_cb:
+          self.write_cb()
+      else:
+        break
