@@ -184,6 +184,23 @@ class RN4020P:
     # Now reset to apply the configuration
     self._write_cmd('R,1')
 
+  def int_to_hex(self, val, byte_count):
+    """Turn an integer into a BLE HEX string with the spefified number
+    of bytes"""
+    s = ''
+    for i in range(byte_count * 2):
+      s += '0123456789ABCDEF'[val & 0xF]
+      val >>= 4
+    return s
+
+  def hex_to_int(self, s):
+    """Turn a BLE HEX string into an integer"""
+    val = 0
+    for c in s[::-1]:
+      val <<= 4
+      val |= '0123456789ABCDEF'.index(c)
+    return val
+
   def read_characteristic(self, uuid):
     """Read the characteristic with the specified UUID
     Data will be returned as a HEX string"""
@@ -195,14 +212,24 @@ class RN4020P:
     else:
       return self._write_cmd('SUR,%04X' % uuid)
 
+  def read_characteristic_int(self, uuid):
+    """Read the characteristic with the specified UUID and return
+    as an integer"""
+    return self.hex_to_int(self.read_characteristic(uuid))
+
   def write_characteristic(self, uuid, data):
     """Write the characteristic with the specified UUID
-    Data needs to be provided as a HEX string on the right length"""
+    Data needs to be provided as a HEX string of the right length"""
     # Choose format based on 16-bit or 128-bit UUID
     if uuid > 0xFFFF:
       self._write_cmd('SUW,%032X,%s' % (uuid, data))
     else:
       self._write_cmd('SUW,%04X,%s' % (uuid, data))
+
+  def write_characteristic_int(self, uuid, val, byte_count):
+    """Write the characteristic with the specified UUID with an
+    integer value of the specified number of bytes"""
+    self.write_characteristic(uuid, self.int_to_hex(val, byte_count))
 
   def process_input(self):
     """Read what's in the input buffer to keep track of events such
@@ -210,7 +237,7 @@ class RN4020P:
     while True:
       l = self._read_line()
       if l != None:
-        print l
+        if self.debug_print: print "<" + l
         # Capture connection event
         if l == 'Connected' and self.connect_cb:
           self.connect_cb(True)
