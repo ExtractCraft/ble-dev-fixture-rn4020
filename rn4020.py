@@ -80,6 +80,16 @@ class RN4020P:
           bitmap |= defined[item]
     return bitmap
 
+  def reset(self):
+    """Reset the BLE module and wait until it's back up and running"""
+    self._write_cmd('R,1')
+    while True:
+      l = self._read_line()
+      if l != None:
+        if self.debug_print: print "<" + l
+        if l == 'CMD':
+          break
+
   def setup(self, cfg):
     """Set up the BLE module with the provided config"""
     # Clear old stuff from the buffer
@@ -182,23 +192,29 @@ class RN4020P:
             self._write_cmd('PC,%032X,%02X,%02X' % (characteristic['uuid'],
                               cproperties, csize))
     # Now reset to apply the configuration
-    self._write_cmd('R,1')
+    self.reset()
 
   def int_to_hex(self, val, byte_count):
-    """Turn an integer into a BLE HEX string with the spefified number
+    """Turn an integer into a BLE HEX string with the specified number
     of bytes"""
     s = ''
-    for i in range(byte_count * 2):
+    for i in range(byte_count):
+      s += '0123456789ABCDEF'[(val >> 4) & 0xF]
       s += '0123456789ABCDEF'[val & 0xF]
-      val >>= 4
+      val >>= 8
     return s
 
   def hex_to_int(self, s):
     """Turn a BLE HEX string into an integer"""
     val = 0
+    nibble = 0
     for c in s[::-1]:
-      val <<= 4
-      val |= '0123456789ABCDEF'.index(c)
+      if nibble & 1:
+        val |= '0123456789ABCDEF'.index(c) << 4
+      else:
+        val <<= 8
+        val |= '0123456789ABCDEF'.index(c)
+      nibble += 1
     return val
 
   def read_characteristic(self, uuid):
@@ -242,8 +258,12 @@ class RN4020P:
         if l == 'Connected' and self.connect_cb:
           self.connect_cb(True)
         # Capture disconnect event
-        if l == 'Connection End' and self.connect_cb:
-          self.connect_cb(False)
+        if l == 'Connection End':
+          # Reset module to prevent active notifications from making the
+          # serial port go nuts with 'NFail's
+          self.reset()
+          if self.connect_cb:
+            self.connect_cb(False)
         # Capture remote characteristic write event
         if l[:3] == 'WV,' and self.write_cb:
           self.write_cb()
