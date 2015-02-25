@@ -238,14 +238,14 @@ class RN4020P:
     Data needs to be provided as a HEX string of the right length"""
     # Choose format based on 16-bit or 128-bit UUID
     if uuid > 0xFFFF:
-      self._write_cmd('SUW,%032X,%s' % (uuid, data))
+      return self._write_cmd('SUW,%032X,%s' % (uuid, data)) == 'AOK'
     else:
-      self._write_cmd('SUW,%04X,%s' % (uuid, data))
+      return self._write_cmd('SUW,%04X,%s' % (uuid, data)) == 'AOK'
 
   def write_characteristic_int(self, uuid, val, byte_count):
     """Write the characteristic with the specified UUID with an
     integer value of the specified number of bytes"""
-    self.write_characteristic(uuid, self.int_to_hex(val, byte_count))
+    return self.write_characteristic(uuid, self.int_to_hex(val, byte_count))
 
   def process_input(self):
     """Read what's in the input buffer to keep track of events such
